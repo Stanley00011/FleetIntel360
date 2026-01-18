@@ -34,10 +34,6 @@ def send_to_slack(payload):
         print(f"Failed to send alert: {e}")
 
 
-# TEST HEARTBEAT (Delete this line after your first successful cloud run)
-send_to_slack({"text": "🚀 FleetIntel360: Alert System is ONLINE (GitHub Action Trigger)"})
-
-
 # Connect to DuckDB
 con = duckdb.connect(DB_PATH)
 

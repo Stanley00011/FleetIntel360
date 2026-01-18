@@ -2,45 +2,47 @@ name: Daily Fleet Sync
 
 on:
   schedule:
-    - cron: '0 5 * * *'
-  workflow_dispatch:      # "Run workflow" UI for testing
+    - cron: '0 5 * * *'  # 6:00 AM Lagos Time
+  workflow_dispatch:      # Manual trigger button
 
 jobs:
   update-dashboard:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip' # Speeds up future runs
 
       - name: Install Dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: Run Simulation & Pipeline
+      - name: Run Daily Operations
         env:
-         
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           PYTHONPATH: ${{ github.workspace }}
+          TZ: "Africa/Lagos"
         run: |
-          # We run for 'today' (2026-01-18)
-          python run_daily_ops.py
+          # Automatically runs for the current calendar date
+          python run_daily_ops.py --date $(date +%Y-%m-%d)
 
-      - name: Commit and Push
+      - name: Commit and Push Changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Force add the database and the newly generated raw data
+          # Force add the binary DB and newly generated raw logs
           git add -f warehouse/analytics/analytics.duckdb
           git add -f warehouse/raw/
           
-          # Commit only if there are changes to avoid "nothing to commit" errors
-          git commit -m "Automated Refresh: $(date +%Y-%m-%d)" || echo "No changes to commit"
-          git push
+          # Only commit if there are actual data changes
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Automated Data Refresh: $(date +%Y-%m-%d %H:%M)" && git push)
