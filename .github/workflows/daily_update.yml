@@ -32,11 +32,15 @@ jobs:
           # We run for 'today' (2026-01-18)
           python run_daily_ops.py
 
-      - name: Commit and Push Updated Database
+      - name: Commit and Push
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          # Only add the database and the raw files generated today
-          git add warehouse/analytics/analytics.duckdb warehouse/raw/
+          
+          # Force add the database and the newly generated raw data
+          git add -f warehouse/analytics/analytics.duckdb
+          git add -f warehouse/raw/
+          
+          # Commit only if there are changes to avoid "nothing to commit" errors
           git commit -m "Automated Refresh: $(date +%Y-%m-%d)" || echo "No changes to commit"
           git push
