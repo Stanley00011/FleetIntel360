@@ -1,13 +1,14 @@
 import duckdb
 import logging
 from pathlib import Path
+import os
 
 # BASE_DIR is /app/ inside the container
-BASE_DIR = Path(__file__).resolve().parent
+ROOT_DIR = os.getcwd()
 
-DB_PATH = BASE_DIR / "warehouse" / "analytics" / "analytics.duckdb"
-SCHEMA_PATH = BASE_DIR / "warehouse" / "sql" / "schema.sql"
-STAGING_PATH = BASE_DIR / "warehouse" / "staging"
+DB_PATH = os.path.join(ROOT_DIR, "warehouse", "analytics", "analytics.duckdb")
+STAGING_PATH = os.path.join(ROOT_DIR, "warehouse", "staging")
+SCHEMA_PATH = os.path.join(ROOT_DIR, "warehouse", "sql", "schema.sql")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -30,7 +31,10 @@ def build_gold_layer():
 
         # 2. Load Dimensions
         logger.info("Loading Drivers Dimension...")
-        con.execute(f"INSERT OR REPLACE INTO mart.dim_driver SELECT * FROM read_json_auto('{STAGING_PATH}/dim_drivers.jsonl')")
+        # Instead of just INSERT OR REPLACE, ensure the table matches the JSON
+        con.execute("CREATE SCHEMA IF NOT EXISTS mart;")
+        con.execute(f"CREATE OR REPLACE TABLE mart.dim_driver AS SELECT * FROM read_json_auto('{STAGING_PATH}/dim_drivers.jsonl')")
+     
 
         # 3. Load Fact Tables (This moves the Jan 18 data!)
         logger.info("Loading Fact Tables with Upsert logic...")
