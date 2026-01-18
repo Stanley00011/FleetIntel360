@@ -37,25 +37,25 @@ def build_gold_layer():
         con.execute(f"CREATE OR REPLACE TABLE mart.dim_driver AS SELECT * FROM read_json_auto('{STAGING_PATH}/dim_drivers.jsonl')")
      
         # 3. Load Fact Tables
-        logger.info("Loading Fact Tables with aligned schema logic...")
+        logger.info("Loading Fact Tables with EXCLUDE logic...")
         
-        # DRIVER SHIFTS
+        # --- DRIVER SHIFTS ---
         con.execute(f"""
             INSERT OR REPLACE INTO mart.fact_driver_shifts 
             BY NAME
             SELECT 
-                *, 
+                * EXCLUDE(timestamp), 
                 timestamp AS event_timestamp, 
                 CAST(timestamp AS DATE) as date_key 
             FROM read_json_auto('{STAGING_PATH}/driver_health_staged.jsonl')
         """)
 
-        # VEHICLE TELEMETRY
+        # --- VEHICLE TELEMETRY ---
         con.execute(f"""
             INSERT OR REPLACE INTO mart.fact_vehicle_telemetry 
             BY NAME
             SELECT 
-                *, 
+                * EXCLUDE(timestamp), 
                 timestamp AS event_timestamp, 
                 CAST(timestamp AS DATE) as date_key 
             FROM read_json_auto('{STAGING_PATH}/vehicles_staged.jsonl')
