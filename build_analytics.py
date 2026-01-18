@@ -36,28 +36,31 @@ def build_gold_layer():
         # Use the string STAGING_PATH 
         con.execute(f"CREATE OR REPLACE TABLE mart.dim_driver AS SELECT * FROM read_json_auto('{STAGING_PATH}/dim_drivers.jsonl')")
      
-
-       # 3. Load Fact Tables
-        logger.info("Loading Fact Tables with Upsert logic...")
+        # 3. Load Fact Tables
+        logger.info("Loading Fact Tables with aligned schema logic...")
         
-        # --- DRIVER HEALTH (SAFE LOAD) ---
-        # CREATE TABLE IF NOT EXISTS to ensure the first run works
-        con.execute(f"CREATE TABLE IF NOT EXISTS mart.fact_driver_shifts AS SELECT *, CAST(timestamp AS DATE) as date_key FROM read_json_auto('{STAGING_PATH}/driver_health_staged.jsonl') WHERE 1=0")
-        
+        # DRIVER SHIFTS
         con.execute(f"""
             INSERT OR REPLACE INTO mart.fact_driver_shifts 
-            SELECT *, CAST(timestamp AS DATE) as date_key 
+            BY NAME
+            SELECT *, CAST(event_timestamp AS DATE) as date_key 
             FROM read_json_auto('{STAGING_PATH}/driver_health_staged.jsonl')
         """)
 
-        con.execute(f"CREATE TABLE IF NOT EXISTS mart.fact_vehicle_daily_metrics AS SELECT * FROM read_json_auto('{STAGING_PATH}/vehicles_staged.jsonl') WHERE 1=0")
-   
+        # VEHICLE TELEMETRY
         con.execute(f"""
-            INSERT OR REPLACE INTO mart.fact_vehicle_daily_metrics 
-            BY NAME 
-            SELECT * FROM read_json_auto('{STAGING_PATH}/vehicles_staged.jsonl')
+            INSERT OR REPLACE INTO mart.fact_vehicle_telemetry 
+            BY NAME
+            SELECT *, CAST(event_timestamp AS DATE) as date_key 
+            FROM read_json_auto('{STAGING_PATH}/vehicles_staged.jsonl')
         """)
 
+        # DAILY FINANCE
+        con.execute(f"""
+            INSERT OR REPLACE INTO mart.fact_daily_finance 
+            BY NAME
+            SELECT * FROM read_json_auto('{STAGING_PATH}/finance_daily_staged.jsonl')
+        """)
         # 4. Final Quality Check
         count = con.execute("SELECT count(*) FROM mart.dim_driver").fetchone()[0]
         logger.info(f"Analytics Layer Ready. Total Drivers in Mart: {count}")
