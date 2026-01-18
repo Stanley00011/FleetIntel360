@@ -39,7 +39,7 @@ def build_gold_layer():
         # 3. Load Fact Tables
         logger.info("Loading Fact Tables with EXCLUDE logic...")
         
-        # --- DRIVER SHIFTS ---
+        # DRIVER SHIFTS
         con.execute(f"""
             INSERT OR REPLACE INTO mart.fact_driver_shifts 
             BY NAME
@@ -50,7 +50,7 @@ def build_gold_layer():
             FROM read_json_auto('{STAGING_PATH}/driver_health_staged.jsonl')
         """)
 
-        # --- VEHICLE TELEMETRY ---
+        # VEHICLE TELEMETRY
         con.execute(f"""
             INSERT OR REPLACE INTO mart.fact_vehicle_telemetry 
             BY NAME
@@ -65,7 +65,10 @@ def build_gold_layer():
         con.execute(f"""
             INSERT OR REPLACE INTO mart.fact_daily_finance 
             BY NAME
-            SELECT * FROM read_json_auto('{STAGING_PATH}/finance_daily_staged.jsonl')
+            SELECT 
+                * EXCLUDE(date), 
+                date AS date_key 
+            FROM read_json_auto('{STAGING_PATH}/finance_daily_staged.jsonl')
         """)
         # 4. Final Quality Check
         count = con.execute("SELECT count(*) FROM mart.dim_driver").fetchone()[0]
