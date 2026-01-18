@@ -1,5 +1,9 @@
 -- Dimension: Driver
 -- 1. Create a master list with the latest activity already calculated
+ALTER TABLE mart.dim_driver ADD COLUMN IF NOT EXISTS status VARCHAR;
+ALTER TABLE mart.dim_driver ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP;
+ALTER TABLE mart.dim_driver ADD COLUMN IF NOT EXISTS first_seen_at TIMESTAMP;
+
 CREATE OR REPLACE TEMP TABLE driver_master_calc AS
 WITH latest_activity AS (
     SELECT driver_id, MAX(event_timestamp) as actual_last_seen
