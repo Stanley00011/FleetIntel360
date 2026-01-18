@@ -6,16 +6,36 @@ import os
 
 from slack_formatter import format_alert
 
-# Load env variables
-load_dotenv(Path(__file__).parent / ".env")
+# CLOUD-AWARE ENVIRONMENT LOADING
+# 1. Try to get from system environment (GitHub Actions / Docker)
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 
-DB_PATH = "warehouse/analytics/analytics.duckdb"
+# 2. Fallback to .env for local development
+if not SLACK_WEBHOOK_URL:
+    load_dotenv(Path(__file__).parent / ".env")
+    SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
+
+# 3. Validation
+if not SLACK_WEBHOOK_URL:
+    print("ERROR: SLACK_WEBHOOK_URL not found. Check GitHub Secrets or local .env")
+else:
+    print("Slack Webhook URL loaded successfully")
+
+# Change path to be relative to the root for GitHub Actions compatibility
+DB_PATH = os.path.join(os.getcwd(), "warehouse/analytics/analytics.duckdb")
 
 
 def send_to_slack(payload):
-    response = requests.post(SLACK_WEBHOOK_URL, json=payload)
-    response.raise_for_status()
+    """Sends the formatted JSON payload to the Slack Webhook."""
+    try:
+        response = requests.post(SLACK_WEBHOOK_URL, json=payload)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Failed to send alert: {e}")
+
+
+# TEST HEARTBEAT (Delete this line after your first successful cloud run)
+send_to_slack({"text": "🚀 FleetIntel360: Alert System is ONLINE (GitHub Action Trigger)"})
 
 
 # Connect to DuckDB
@@ -28,13 +48,22 @@ ALERT_SQL_FILES = [
     "warehouse/sql/alerts/alert_data_freshness.sql",
 ]
 
+print(f"Checking {len(ALERT_SQL_FILES)} alert queries...")
+
 for sql_file in ALERT_SQL_FILES:
+    if not os.path.exists(sql_file):
+        print(f"Warning: SQL file not found: {sql_file}")
+        continue
+
     sql = Path(sql_file).read_text()
     df = con.execute(sql).df()
 
     if df.empty:
+        print(f"No results for: {os.path.basename(sql_file)}")
         continue
 
+    print(f"ALERT FOUND in {os.path.basename(sql_file)}: Sending to Slack...")
+    
     payload = format_alert(
         title="🚨 Fleet Alert",
         rows=df,
@@ -42,11 +71,11 @@ for sql_file in ALERT_SQL_FILES:
         entity_column="entity_id"
     )
 
-    # Slack safety limit
-    if len(payload.get("blocks", [])) > 45:
+    # Slack safety limit (max 50 blocks allowed)
+    if "blocks" in payload and len(payload["blocks"]) > 45:
         payload["blocks"] = payload["blocks"][:45]
 
     send_to_slack(payload)
 
 con.close()
-print("Alerts run complete")
+print("Alerts run complete.")
