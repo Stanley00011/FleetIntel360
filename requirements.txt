@@ -1,0 +1,8 @@
+streamlit
+duckdb
+pandas
+plotly
+faker
+python-dotenv
+slack_sdk
+matplotlib

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Data & Database 
+# (We will ignore raw data, but keep the analytics DB for Streamlit Cloud)
+warehouse/raw/
+warehouse/staging/
+*.log
+
+# Docker
+.dockerignore
+
+# Secrets 
+.env
+auth.json
+*.json
+!warehouse/analytics/analytics.duckdb # This '!' tells Git to TRACK this specific file

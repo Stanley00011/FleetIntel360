@@ -1,0 +1,37 @@
+name: Daily Fleet Sync
+
+on:
+  schedule:
+    - cron: '0 5 * * *' # Runs at 5 AM UTC daily
+  workflow_dispatch:      # Allows manually running from the "Actions" tab
+
+jobs:
+  update-dashboard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Simulation & Pipeline
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          python run_daily_ops.py
+
+      - name: Commit Updated Database
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add warehouse/analytics/analytics.duckdb
+          git commit -m "Automated Refresh: $(date +%Y-%m-%d)" || echo "No changes"
+          git push

@@ -1,0 +1,15 @@
+services:
+  fleet-intel:
+    build: 
+      context: ..
+      dockerfile: infra/Dockerfile
+    # ADD:
+    env_file:
+      - ../.env
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../warehouse:/app/warehouse
+      - ../.env:/app/.env
+    # env_file handles it
+    restart: always
