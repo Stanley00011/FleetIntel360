@@ -33,11 +33,11 @@ def build_gold_layer():
         # 2. Load Dimensions
         logger.info("Loading Drivers Dimension...")
         con.execute("CREATE SCHEMA IF NOT EXISTS mart;")
-        # Use the string STAGING_PATH here
+        # Use the string STAGING_PATH 
         con.execute(f"CREATE OR REPLACE TABLE mart.dim_driver AS SELECT * FROM read_json_auto('{STAGING_PATH}/dim_drivers.jsonl')")
      
 
-        # 3. Load Fact Tables (This moves the Jan 18 data!)
+        # 3. Load Fact Tables 
         logger.info("Loading Fact Tables with Upsert logic...")
         
         # Driver Health
