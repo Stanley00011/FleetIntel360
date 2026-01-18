@@ -1,6 +1,7 @@
 # run_staging.py
 import subprocess
 import logging
+import os 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -8,8 +9,7 @@ logger = logging.getLogger(__name__)
 def run_script(script_name):
     logger.info(f"--- Running {script_name} ---")
     try:
-        # Runs the script and waits for it to finish
-        subprocess.run(["python", script_name], check=True)
+        subprocess.run(["python", script_name], check=True, env=os.environ.copy())
     except subprocess.CalledProcessError as e:
         logger.error(f"Error occurred while running {script_name}: {e}")
         return False

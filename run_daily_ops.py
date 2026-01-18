@@ -3,6 +3,7 @@ import subprocess
 import logging
 import argparse
 from datetime import date
+import os
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -27,9 +28,13 @@ def main():
             "--days", "1"
         ], check=True)
 
-        # STEP 2: Run the full staging pipeline (staging -> DuckDB -> Alerts)
+        # STEP 2: Run the full staging pipeline
         logger.info("Step 2/2: Executing Staging Pipeline & Analytics Refresh...")
-        subprocess.run(["python", "run_staging.py"], check=True)
+        subprocess.run(
+            ["python", "run_staging.py"], 
+            check=True, 
+            env=os.environ.copy() # Add this line here too!
+        )
 
         logger.info(f"Operations complete. Dashboard and Alerts updated for {target_date}.")
         
