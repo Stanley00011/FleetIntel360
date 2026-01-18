@@ -66,7 +66,7 @@ def format_alert(
             {
                 "type": "button",
                 "text": {"type": "plain_text", "text": "View Dashboard"},
-                "url": "http://localhost:8501/Data_Quality", 
+                "url": "https://fleetintel360-ysuogxo9vb4xcbf6jnqj2h.streamlit.app/Data_Quality", 
                 "style": "primary"
             }
         ]
