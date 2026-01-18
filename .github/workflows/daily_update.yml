@@ -2,8 +2,8 @@ name: Daily Fleet Sync
 
 on:
   schedule:
-    - cron: '0 5 * * *' # Runs at 5 AM UTC daily
-  workflow_dispatch:      # Allows manually running from the "Actions" tab
+    - cron: '0 5 * * *'
+  workflow_dispatch:      # "Run workflow" UI for testing
 
 jobs:
   update-dashboard:
@@ -20,18 +20,23 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
 
       - name: Run Simulation & Pipeline
         env:
+         
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          PYTHONPATH: ${{ github.workspace }}
         run: |
+          # We run for 'today' (2026-01-18)
           python run_daily_ops.py
 
-      - name: Commit Updated Database
+      - name: Commit and Push Updated Database
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add warehouse/analytics/analytics.duckdb
-          git commit -m "Automated Refresh: $(date +%Y-%m-%d)" || echo "No changes"
+          # Only add the database and the raw files generated today
+          git add warehouse/analytics/analytics.duckdb warehouse/raw/
+          git commit -m "Automated Refresh: $(date +%Y-%m-%d)" || echo "No changes to commit"
           git push
