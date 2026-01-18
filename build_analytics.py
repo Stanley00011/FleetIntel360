@@ -14,13 +14,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(
 logger = logging.getLogger(__name__)
 
 def build_gold_layer():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    db_path_obj = Path(DB_PATH)
+    db_path_obj.parent.mkdir(parents=True, exist_ok=True)
     
-    if not SCHEMA_PATH.exists():
+    if not os.path.exists(SCHEMA_PATH):
         raise FileNotFoundError(f"CRITICAL: Schema file not found at {SCHEMA_PATH}")
 
-    # Open connection ONCE
-    con = duckdb.connect(str(DB_PATH))
+    # Open connection
+    con = duckdb.connect(DB_PATH)
     
     try:
         logger.info("Connection to DuckDB successful. Starting load...")
@@ -31,8 +32,8 @@ def build_gold_layer():
 
         # 2. Load Dimensions
         logger.info("Loading Drivers Dimension...")
-        # Instead of just INSERT OR REPLACE, ensure the table matches the JSON
         con.execute("CREATE SCHEMA IF NOT EXISTS mart;")
+        # Use the string STAGING_PATH here
         con.execute(f"CREATE OR REPLACE TABLE mart.dim_driver AS SELECT * FROM read_json_auto('{STAGING_PATH}/dim_drivers.jsonl')")
      
 
