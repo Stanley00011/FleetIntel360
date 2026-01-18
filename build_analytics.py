@@ -43,7 +43,10 @@ def build_gold_layer():
         con.execute(f"""
             INSERT OR REPLACE INTO mart.fact_driver_shifts 
             BY NAME
-            SELECT *, CAST(event_timestamp AS DATE) as date_key 
+            SELECT 
+                *, 
+                timestamp AS event_timestamp, 
+                CAST(timestamp AS DATE) as date_key 
             FROM read_json_auto('{STAGING_PATH}/driver_health_staged.jsonl')
         """)
 
@@ -51,7 +54,10 @@ def build_gold_layer():
         con.execute(f"""
             INSERT OR REPLACE INTO mart.fact_vehicle_telemetry 
             BY NAME
-            SELECT *, CAST(event_timestamp AS DATE) as date_key 
+            SELECT 
+                *, 
+                timestamp AS event_timestamp, 
+                CAST(timestamp AS DATE) as date_key 
             FROM read_json_auto('{STAGING_PATH}/vehicles_staged.jsonl')
         """)
 
