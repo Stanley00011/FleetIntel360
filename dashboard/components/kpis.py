@@ -2,10 +2,6 @@
 from utils.db import run_query
 
 def get_executive_kpis():
-    """
-    Aggregates KPIs across both Driver and Vehicle marts for the current date.
-    """
-    # 1. Metrics from Driver Mart (Fatigue, Profit, Fraud)
     driver_sql = """
     SELECT 
         COUNT(DISTINCT driver_id) AS active_drivers,
@@ -16,7 +12,6 @@ def get_executive_kpis():
     WHERE date_key = CURRENT_DATE
     """
     
-    # 2. Metrics from Vehicle Mart (Total Speeding)
     vehicle_sql = """
     SELECT 
         SUM(speeding_events) AS total_speeding
@@ -27,14 +22,16 @@ def get_executive_kpis():
     d_df = run_query(driver_sql)
     v_df = run_query(vehicle_sql)
     
-    # Combine into a single dictionary for the UI
-    # We use .get() or fillna to prevent crashes if today's data isn't in yet
+    # Use .get() or check if empty to prevent iloc errors
+    has_driver_data = not d_df.empty and d_df["active_drivers"].iloc[0] is not None
+    has_vehicle_data = not v_df.empty and v_df["total_speeding"].iloc[0] is not None
+
     return {
-        "active_drivers": int(d_df["active_drivers"].iloc[0]) if not d_df.empty else 0,
-        "avg_fatigue_index": float(d_df["avg_fatigue"].iloc[0]) if not d_df.empty else 0.0,
-        "net_profit": float(d_df["net_profit"].iloc[0]) if not d_df.empty else 0.0,
-        "fraud_alerts": int(d_df["fraud_alerts"].iloc[0]) if not d_df.empty else 0,
-        "total_speeding_events": int(v_df["total_speeding"].iloc[0]) if not v_df.empty else 0
+        "active_drivers": int(d_df["active_drivers"].iloc[0]) if has_driver_data else 0,
+        "avg_fatigue_index": float(d_df["avg_fatigue"].iloc[0]) if has_driver_data else 0.0,
+        "net_profit": float(d_df["net_profit"].iloc[0]) if has_driver_data else 0.0,
+        "fraud_alerts": int(d_df["fraud_alerts"].iloc[0]) if has_driver_data else 0,
+        "total_speeding_events": int(v_df["total_speeding"].iloc[0]) if has_vehicle_data else 0
     }
 
 def get_readiness_kpis():
