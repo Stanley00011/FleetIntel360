@@ -9,14 +9,15 @@ def get_executive_kpis():
         SUM(net_profit)           AS net_profit,
         SUM(fraud_alerts_count)   AS fraud_alerts
     FROM mart.fact_driver_daily_metrics
-    WHERE date_key = CURRENT_DATE
+    WHERE date_key = (SELECT MAX(date_key) FROM mart.fact_driver_daily_metrics)
     """
     
     vehicle_sql = """
     SELECT 
         SUM(speeding_events) AS total_speeding
     FROM mart.fact_vehicle_daily_metrics
-    WHERE date_key = CURRENT_DATE
+    -- Instead of WHERE date_key = CURRENT_DATE
+    WHERE date_key = (SELECT MAX(date_key) FROM mart.fact_driver_daily_metrics)
     """
     
     d_df = run_query(driver_sql)
