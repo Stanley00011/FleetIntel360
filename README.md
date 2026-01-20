@@ -3,11 +3,6 @@
 **Real-time Fleet Telemetry Analytics Platform**  
 *From Raw Sensor Data to Actionable Business Intelligence*
 
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
-[![DuckDB](https://img.shields.io/badge/warehouse-DuckDB-yellow.svg)](https://duckdb.org/)
-[![Streamlit](https://img.shields.io/badge/dashboard-Streamlit-red.svg)](https://streamlit.io/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
 **Live Dashboard:** [fleetintel360.streamlit.app](https://fleetintel360-ysuogxo9vb4xcbf6jnqj2h.streamlit.app/)
 **Technical Documentation:** [FleetIntel360-Technical-Documentation](https://secret-hunter-438.notion.site/FleetIntel360-Technical-Documentation-2ed27ce50c4c809cb5c3e7899f81a815?pvs=143/)
 
@@ -118,7 +113,7 @@ Realistic data generation across three operational domains:
   - Revenue per trip
   - Operational costs (fuel, tolls, maintenance)
   - Net profitability calculation
-  - Fraud signal detection (~12% probability)
+  - Fraud signal detection (12% probability)
 
 ### **2. Production-Grade Data Pipeline**
 
@@ -531,3 +526,4 @@ Data Analyst → Data Engineer
 ---
 
 ** If you found this project valuable, star the repository!**
+
