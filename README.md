@@ -10,11 +10,11 @@
 
 ## Project Overview
 
-FleetIntel360 is a **production-grade data engineering project** that simulates, processes, and analyzes fleet telemetry data from vehicles and drivers. Inspired by **Formula 1's real-time telemetry systems** (which stream vehicle data using technologies like Apache Kafka), this project demonstrates a complete data pipeline—from raw sensor simulation to executive dashboards and automated alerting.
+FleetIntel360 is a **production-grade data engineering project** that simulates, processes, and analyzes fleet telemetry data from vehicles and drivers. Inspired by **Formula 1's real-time telemetry systems** (which stream vehicle data using technologies like Apache Kafka), this project demonstrates a complete data pipeline, from raw sensor simulation to executive dashboards and automated alerting.
 
 ### **The Motivation**
 
-As a data analyst who has spent years consuming data, I wanted to **see the full engineering picture**—to understand how data flows from its source through transformations into the insights I analyze daily. This project represents my journey from being a **data consumer** to becoming a **data platform builder**.
+As a data analyst who has spent years consuming data, I wanted to **see the full engineering picture** to understand how data flows from its source through transformations into the insights I analyze daily. This project represents my journey from being a **data consumer** to becoming a **data platform builder**.
 
 ### **Business Use Case**
 
@@ -517,7 +517,7 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 ## Connect
 
-**Olajide Ajao **  
+**Olajide Ajao**  
 Data Analyst → Data Engineer  
 [LinkedIn](https://www.linkedin.com/in/olajide-ajao/) | [GitHub](https://github.com/Stanley00011)
 
@@ -525,5 +525,6 @@ Data Analyst → Data Engineer
 
 ---
 
-** If you found this project valuable, star the repository!**
+**If you found this project valuable, star the repository!**
+
 
