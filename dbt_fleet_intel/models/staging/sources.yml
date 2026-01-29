@@ -1,0 +1,14 @@
+# dbt_fleet_intel/models/staging/sources.yml
+version: 2
+
+sources:
+  - name: fleet_raw
+    project: fleetintel360 # Your GCP Project ID
+    dataset: fleet_intel_raw
+    tables:
+      - name: raw_telemetry
+        description: "Raw streaming vehicle telemetry from Pub/Sub"
+      - name: raw_health
+        description: "Raw streaming driver health and fatigue data"
+      - name: raw_finance
+        description: "Raw streaming daily finance and trip summaries"

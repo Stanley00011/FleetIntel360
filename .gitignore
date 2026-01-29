@@ -18,3 +18,7 @@ warehouse/staging/
 auth.json
 *.json
 !warehouse/analytics/analytics.duckdb # This '!' tells Git to TRACK this specific file
+
+# .env
+GCP_PROJECT_ID=fleetintel360
+GOOGLE_APPLICATION_CREDENTIALS=service_account.json

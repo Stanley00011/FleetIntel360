@@ -18,7 +18,9 @@ import argparse
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import List
+from dotenv import load_dotenv
 
+from simulator.cloud_publisher import CloudPublisher
 from simulator.vehicle_sim import Vehicle
 from simulator import driver_health_sim
 from simulator import finance_sim
@@ -35,6 +37,9 @@ FINANCE_OUT = os.path.join(RAW_ROOT, "finance")
 
 DEFAULT_TELEMETRY_PER_DAY = 180
 
+
+# Load environment variables from .env
+load_dotenv()
 
 # Logging
 logging.basicConfig(
@@ -138,70 +143,61 @@ def generate_finance_events(drivers, date, trips_range):
 
 
 # Orchestrator
-def run_batch(
-    start_date,
-    days,
-    telemetry_per_day,
-    overwrite
-):
+def run_batch(start_date, days, telemetry_per_day, overwrite, mode="file"):
     ensure_dirs()
-
-    # Uses the dynamic list (Buses + Cars)
     vehicles_meta = make_vehicle_list()
+    
+    # Initialize publisher only if needed
+    publisher = CloudPublisher() if mode == "pubsub" else None
 
     for offset in range(days):
         date = start_date - timedelta(days=offset)
-        logging.info(f"Generating data for {date}")
+        logging.info(f"Generating data for {date} | Mode: {mode}")
 
-        # Vehicle Telemetry
-        write_jsonl(
-            os.path.join(VEHICLES_OUT, f"{date}.jsonl"),
-            generate_vehicle_snapshots(vehicles_meta, telemetry_per_day, date),
-            overwrite=overwrite,
-        )
+        # --- 1. Vehicle Telemetry ---
+        v_records = generate_vehicle_snapshots(vehicles_meta, telemetry_per_day, date)
+        if mode == "pubsub":
+            for r in v_records:
+                publisher.publish("fleet-telemetry", r)
+        else:
+            write_jsonl(os.path.join(VEHICLES_OUT, f"{date}.jsonl"), v_records, overwrite)
 
-        # Health Events (Uses DRIVERS constant from common)
-        write_jsonl(
-            os.path.join(HEALTH_OUT, f"{date}.jsonl"),
-            generate_health_events(DRIVERS, date),
-            overwrite=overwrite,
-        )
+        # --- 2. Health Events ---
+        h_records = generate_health_events(DRIVERS, date)
+        if mode == "pubsub":
+            for r in h_records:
+                publisher.publish("fleet-health", r)
+        else:
+            write_jsonl(os.path.join(HEALTH_OUT, f"{date}.jsonl"), h_records, overwrite)
 
-        # Finance Summaries
-        write_jsonl(
-            os.path.join(FINANCE_OUT, f"{date}.jsonl"),
-            generate_finance_events(DRIVERS, date, (5, 15)),
-            overwrite=overwrite,
-        )
+        # --- 3. Finance Summaries ---
+        f_records = generate_finance_events(DRIVERS, date, (5, 15))
+        if mode == "pubsub":
+            for r in f_records:
+                publisher.publish("fleet-finance", r)
+        else:
+            write_jsonl(os.path.join(FINANCE_OUT, f"{date}.jsonl"), f_records, overwrite)
 
-    logging.info(f"Batch run complete. Processed {len(vehicles_meta)} active vehicles.")
+    logging.info(f"Batch run complete. Mode: {mode}")
 
-# CLI
 def parse_args():
     p = argparse.ArgumentParser(description="FleetIntel360 batch simulator")
-    p.add_argument(
-        "--start-date", 
-        default=str(datetime.now().date()), 
-        help="YYYY-MM-DD (defaults to today)"
-    )
+    p.add_argument("--start-date", default=str(datetime.now().date()))
     p.add_argument("--days", type=int, default=1)
     p.add_argument("--telemetry-per-day", type=int, default=180)
     p.add_argument("--overwrite", action="store_true")
-
+    p.add_argument("--mode", choices=["file", "pubsub"], default="file", help="Output to local file or GCP PubSub") # <--- Added
     return p.parse_args()
-
 
 def main():
     args = parse_args()
-
-    # Convert the string date from CLI into a date object
     start_dt = datetime.fromisoformat(args.start_date).date()
-
     run_batch(
         start_date=start_dt,
         days=args.days,
         telemetry_per_day=args.telemetry_per_day,
         overwrite=args.overwrite,
+        mode=args.mode # <--- Passed to logic
     )
 
 if __name__ == "__main__":

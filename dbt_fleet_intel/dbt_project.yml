@@ -1,0 +1,20 @@
+# dbt_fleet_intel/dbt_project.yml
+name: 'dbt_fleet_intel'
+version: '1.0.0'
+config-version: 2
+
+# This is where dbt will look for your SQL files
+model-paths: ["models"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+
+profile: 'fleet_intel' # This must match the name in your profiles.yml
+
+models:
+  dbt_fleet_intel:
+    # This means everything in models/staging/ will be created as VIEWS in BigQuery
+    staging:
+      +materialized: view
+    # This means everything in models/marts/ will be created as TABLES in BigQuery
+    marts:
+      +materialized: table

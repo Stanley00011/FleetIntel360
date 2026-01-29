@@ -71,4 +71,4 @@ LEFT JOIN mart.fact_vehicle_telemetry t
    AND v.date_key   = t.date_key
 GROUP BY
     v.vehicle_id,
-    v.date_key;
+    v.date_key;       
