@@ -18,21 +18,18 @@ from datetime import datetime, timedelta, timezone
 
 #  SHARED ENTITY MAPS (The "Master Switch")
 
-# 10 DRIVERS TOTAL: 6 Active, 4 Retired
-DRIVERS_MAP = {
-    "DR_001": "ACTIVE", "DR_002": "ACTIVE", "DR_003": "ACTIVE", 
-    "DR_004": "ACTIVE", "DR_005": "ACTIVE",
-    "DR_006": "ACTIVE", "DR_007": "RETIRED", "DR_008": "RETIRED", 
-    "DR_009": "RETIRED", "DR_010": "RETIRED"
-}
+# 60 TOTAL DRIVERS: 50 Active, 10 Retired
+DRIVERS_MAP = {f"DR_{i:03}": "ACTIVE" for i in range(1, 51)}
+DRIVERS_MAP.update({f"DR_{i:03}": "RETIRED" for i in range(51, 61)})
 
-# 11 VEHICLES TOTAL: 6 Active (BUS/CAR), 5 Maintenance
-VEHICLES_MAP = {
-    "BUS_01": "ACTIVE", "BUS_02": "ACTIVE", "BUS_06": "ACTIVE",
-    "CAR_01": "ACTIVE", "CAR_02": "ACTIVE", "CAR_03": "ACTIVE",
-    "BUS_03": "MAINTENANCE", "BUS_04": "MAINTENANCE", "BUS_05": "MAINTENANCE",
-    "CAR_04": "MAINTENANCE", "CAR_05": "MAINTENANCE"
-}
+# 60 TOTAL VEHICLES: 50 Active, 10 Maintenance
+# 25 Buses + 25 Cars = 50 Active
+VEHICLES_MAP = {f"BUS_{i:02}": "ACTIVE" for i in range(1, 26)}
+VEHICLES_MAP.update({f"CAR_{i:02}": "ACTIVE" for i in range(1, 26)})
+VEHICLES_MAP.update({f"VAN_{i:02}": "MAINTENANCE" for i in range(1, 11)})
+
+DRIVERS = [k for k, v in DRIVERS_MAP.items() if v == "ACTIVE"]
+VEHICLES = [k for k, v in VEHICLES_MAP.items() if v == "ACTIVE"]
 
 # Used by vehicle_sim, driver_health_sim, and finance_sim
 # These dynamically pull only the 'ACTIVE' ones for the simulation loop

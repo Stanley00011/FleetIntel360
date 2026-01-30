@@ -1,18 +1,18 @@
+-- dbt_fleet_intel/models/staging/stg_finance.sql
 WITH source AS (
     SELECT * FROM {{ source('fleet_raw', 'raw_finance') }}
 ),
 renamed AS (
     SELECT
-        JSON_VALUE(data, '$.event_id') AS event_id,
         JSON_VALUE(data, '$.driver_id') AS driver_id,
         CAST(JSON_VALUE(data, '$.total_revenue') AS FLOAT64) AS revenue,
         CAST(JSON_VALUE(data, '$.total_cost') AS FLOAT64) AS total_cost,
         CAST(JSON_VALUE(data, '$.net_profit') AS FLOAT64) AS net_profit,
-        JSON_VALUE(data, '$.trading_position') AS trading_position,
-        CAST(JSON_VALUE(data, '$.end_of_day_balance') AS FLOAT64) AS account_balance,
-        -- Extracting date string and casting to DATE type
         CAST(JSON_VALUE(data, '$.date') AS DATE) AS business_date,
-        publish_time AS ingested_at
+        publish_time AS ingested_at,
+        
+        -- ADD THIS: Pull the fraud count from the simulator's JSON
+        CAST(JSON_VALUE(data, '$.fraud_alerts_count') AS INT64) AS fraud_alerts_count
     FROM source
 )
 SELECT * FROM renamed

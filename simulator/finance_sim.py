@@ -150,4 +150,4 @@ def run_simulation(
 
 #   SCRIPT ENTRY POINT
 if __name__ == "__main__":
-    run_simulation(DRIVERS, days=7)
+    run_simulation(DRIVERS, days=1)
