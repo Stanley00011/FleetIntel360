@@ -38,7 +38,7 @@ jobs:
         run: pytest tests/
 
       - name: Run Simulator (Zero-Cost Mode)
-        run: python -m simulator.run_simulation --mode pubsub --days 1 --limit 50
+        run: python -m simulator.run_simulation --mode pubsub --days 1 --telemetry-per-day 50
 
       - name: Run dbt Transformations
         working-directory: ./dbt_fleet_intel
