@@ -16,6 +16,7 @@ jobs:
       CLOUD_SLACK_WEBHOOK: ${{ secrets.CLOUD_SLACK_WEBHOOK }}
       GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
       GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/service_account.json
+      PYTHONPATH: .  
 
     steps:
       - uses: actions/checkout@v3
@@ -28,13 +29,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          # dbt-bigquery might need to be explicitly installed if not in requirements.txt
           pip install dbt-bigquery pytest
 
       - name: Create Service Account Key File
         run: echo '${{ secrets.GCP_SA_KEY }}' > ${{ github.workspace }}/service_account.json
 
-      - name: Run Rigor Tests
+      - name: System & Logic Tests
         run: pytest tests/
 
       - name: Run Simulator (Zero-Cost Mode)
