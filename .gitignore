@@ -33,5 +33,4 @@ auth.json
 dbt_fleet_intel/target/
 dbt_fleet_intel/logs/
 dbt_fleet_intel/dbt_packages/
-dbt_fleet_intel/profiles.yml
 dbt_fleet_intel/.user.yml
