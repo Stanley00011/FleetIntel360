@@ -46,7 +46,7 @@ jobs:
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }} 
         run: |
           # dbt deps only needed if you have a packages.yml
-          dbt run --target prod --profiles-dir .
+          run: dbt run --target prod --profiles-dir . --full-refresh
 
       - name: Dispatch Slack Alerts
         run: python monitor_alerts.py

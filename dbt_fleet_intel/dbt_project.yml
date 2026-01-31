@@ -11,7 +11,7 @@ seed-paths: ["seeds"]
 profile: 'fleet_intel' 
 
 models:
-  dbt_fleet_intel:
+  fleet_intel: 
     # This means everything in models/staging/ will be created as VIEWS in BigQuery
     staging:
       +materialized: view

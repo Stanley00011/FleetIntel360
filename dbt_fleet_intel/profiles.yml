@@ -6,7 +6,6 @@ fleet_intel:
       method: service-account
       project: "{{ env_var('GCP_PROJECT_ID') }}"
       dataset: fleet_intel_staging
-      # This points to the "Ghost File" we create in the workflow
-      keyfile: "../service_account.json" 
+      keyfile: "/home/runner/work/FleetIntel360/FleetIntel360/service_account.json"
       threads: 4
       location: US
