@@ -1,10 +1,10 @@
 name: Fleet Data Pipeline (Cloud Native Branch)
 
 on:
-  # Removing the 'push' section stops it from running on every commit
+ 
   schedule:
     - cron: '0 6 * * *' # Daily at 6:00 AM UTC
-  workflow_dispatch:   # This keeps the "Run workflow" button in GitHub
+  workflow_dispatch:   
 
 jobs:
   run-fleet-intel:
@@ -43,10 +43,7 @@ jobs:
         working-directory: ./dbt_fleet_intel
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }} 
-        run: |
-          # dbt deps only needed if you have a packages.yml
-          run: dbt run --target prod --profiles-dir . --full-refresh
+        run: dbt run --target prod --profiles-dir . --full-refresh
 
       - name: Dispatch Slack Alerts
         run: python monitor_alerts.py
