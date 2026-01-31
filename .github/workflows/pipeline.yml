@@ -1,10 +1,12 @@
-name: Fleet Data Pipeline
+name: Fleet Data Pipeline (Cloud Native Branch)
 
 on:
+  push:
+    branches:
+      - feature/cloud-native  
   schedule:
-    # 6:00 UTC 
-    - cron: '0 6 * * *'
-  workflow_dispatch: 
+    - cron: '0 6 * * *'       
+  workflow_dispatch:          
 
 jobs:
   run-fleet-intel:
@@ -26,13 +28,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest
+          # dbt-bigquery might need to be explicitly installed if not in requirements.txt
+          pip install dbt-bigquery pytest
 
       - name: Create Service Account Key File
         run: echo '${{ secrets.GCP_SA_KEY }}' > ${{ github.workspace }}/service_account.json
 
       - name: Run Rigor Tests
-        # If tests fail here, the whole pipeline stops (safety first!)
         run: pytest tests/
 
       - name: Run Simulator (Zero-Cost Mode)
@@ -40,7 +42,9 @@ jobs:
 
       - name: Run dbt Transformations
         working-directory: ./dbt_fleet_intel
-        run: dbt run --target prod --profiles-dir .
+        run: |
+          dbt deps --profiles-dir .
+          dbt run --target prod --profiles-dir .
 
       - name: Dispatch Slack Alerts
         run: python monitor_alerts.py
