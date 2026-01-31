@@ -1,5 +1,5 @@
 # dbt_fleet_intel/dbt_project.yml
-name: 'dbt_fleet_intel'
+name: 'fleet_intel'
 version: '1.0.0'
 config-version: 2
 
