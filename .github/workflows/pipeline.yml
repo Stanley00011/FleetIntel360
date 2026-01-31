@@ -1,12 +1,10 @@
 name: Fleet Data Pipeline (Cloud Native Branch)
 
 on:
-  push:
-    branches:
-      - feature/cloud-native  
+  # Removing the 'push' section stops it from running on every commit
   schedule:
-    - cron: '0 6 * * *' #UTC      
-  workflow_dispatch:          
+    - cron: '0 6 * * *' # Daily at 6:00 AM UTC
+  workflow_dispatch:   # This keeps the "Run workflow" button in GitHub
 
 jobs:
   run-fleet-intel:
@@ -32,7 +30,8 @@ jobs:
           pip install dbt-bigquery pytest
 
       - name: Create Service Account Key File
-        run: echo '${{ secrets.GCP_SA_KEY }}' > ${{ github.workspace }}/service_account.json
+        run: |
+          echo '${{ secrets.GCP_SA_KEY }}' > ${{ github.workspace }}/service_account.json
 
       - name: System & Logic Tests
         run: pytest tests/
@@ -46,7 +45,7 @@ jobs:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }} 
         run: |
-          dbt deps --profiles-dir .
+          # dbt deps only needed if you have a packages.yml
           dbt run --target prod --profiles-dir .
 
       - name: Dispatch Slack Alerts
