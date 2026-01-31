@@ -15,7 +15,7 @@ renamed AS (
         CAST(JSON_VALUE(data, '$.date') AS DATE) AS business_date,
         publish_time AS ingested_at,
         
-        -- ADD THIS: Pull the fraud count from the simulator's JSON
+        -- Pull the fraud count from the simulator's JSON
         CAST(JSON_VALUE(data, '$.fraud_alerts_count') AS INT64) AS fraud_alerts_count
     FROM source
 )

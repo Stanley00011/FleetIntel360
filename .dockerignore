@@ -1,0 +1,13 @@
+# Root .dockerignore
+.git
+.gitignore
+__pycache__
+.env
+.venv
+.vscode
+.dbt/
+logs/
+target/
+*.db
+*.db.wal
+warehouse/

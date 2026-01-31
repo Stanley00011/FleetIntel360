@@ -1,8 +1,27 @@
-streamlit
-duckdb
-pandas
-plotly
+# Web & Data
+streamlit==1.31.0
+pandas==2.1.4
+altair==5.2.0
+
+
+# Web & Data
+streamlit==1.31.0
+pandas>=2.1.4
+altair>=5.2.0
+matplotlib
+duckdb>=0.10.0
+db-dtypes
+
+# GCP & BigQuery
+google-cloud-bigquery
+google-cloud-pubsub
+google-auth
+
+# Transformation
+dbt-bigquery
+
+# Utils & Simulation
 faker
 python-dotenv
-slack_sdk
-matplotlib
+requests
+pytest

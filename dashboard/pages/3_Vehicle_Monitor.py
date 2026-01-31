@@ -1,161 +1,113 @@
-# dashboard/pages/3_Vehicle_Monitor.py
 import streamlit as st
 import pandas as pd
+import os
+import altair as alt
 from utils.db import run_query
-from components.filters import vehicle_filter, date_filter
+from utils.formatting import format_int
 
-# Page config
-st.set_page_config(page_title="Vehicle Monitor", layout="wide")
+st.set_page_config(page_title="Vehicle Health Monitor", layout="wide")
 
-st.title("Vehicle Monitor")
-st.caption("Operational health and diagnostic risk trends")
+PROJECT_ID = os.getenv('GCP_PROJECT_ID', 'fleetintel360')
+SCHEMA = f"{PROJECT_ID}.fleet_intel_staging"
 
-# 1. FILTERS
-col1, col2 = st.columns(2)
-with col1:
-    selected_vehicle = vehicle_filter()
-with col2:
-    start_date, end_date = date_filter()
+st.title("🚛 Vehicle Health & Maintenance")
+st.caption("Predictive diagnostics and real-time asset tracking")
 
-if not selected_vehicle:
-    st.info("Select a vehicle to begin analysis.")
-    st.stop()
+# 1. SELECTOR & GLOBAL STATUS
+# Pulling both ID and Status to handle maintenance logic
+v_options = run_query(f"SELECT vehicle_id, operational_status, vehicle_type FROM `{SCHEMA}.dim_vehicles` ORDER BY 1")
+selected_vehicle = st.selectbox("Select Asset ID", v_options['vehicle_id'])
 
-# 2. DYNAMIC THRESHOLD FETCHING
-thresholds_df = run_query("""
-    SELECT metric_name, warning_threshold, critical_threshold 
-    FROM mart.alert_thresholds 
-    WHERE metric_name IN ('engine_temp_c', 'battery_voltage')
-""")
+# Get metadata for selected vehicle
+v_meta = v_options[v_options['vehicle_id'] == selected_vehicle].iloc[0]
 
-temp_warn = thresholds_df.loc[thresholds_df['metric_name'] == 'engine_temp_c', 'warning_threshold'].values[0] if not thresholds_df.empty else 95.0
-temp_crit = thresholds_df.loc[thresholds_df['metric_name'] == 'engine_temp_c', 'critical_threshold'].values[0] if not thresholds_df.empty else 105.0
-batt_warn = thresholds_df.loc[thresholds_df['metric_name'] == 'battery_voltage', 'warning_threshold'].values[0] if not thresholds_df.empty else 11.8
+if selected_vehicle:
+    # 2. STATUS OVERLAY
+    if v_meta['operational_status'] != 'ACTIVE':
+        st.warning(f"🚨 **ASSET OFFLINE:** This {v_meta['vehicle_type']} is currently marked as **{v_meta['operational_status']}**.")
+    else:
+        st.success(f"✅ **ASSET ONLINE:** {v_meta['vehicle_type']} is mission-ready.")
 
-# 3. DATA FETCHING
-summary_sql = f"""
-SELECT
-    COUNT(DISTINCT date_key)           AS active_days,
-    AVG(avg_speed_kph)                 AS avg_speed,
-    MAX(max_speed_kph)                 AS max_speed,
-    AVG(avg_engine_temp_c)             AS avg_engine_temp,
-    AVG(avg_battery_voltage)           AS avg_battery,
-    SUM(speeding_events)               AS total_speeding
-FROM mart.fact_vehicle_daily_metrics
-WHERE vehicle_id = '{selected_vehicle}'
-  AND date_key BETWEEN '{start_date}' AND '{end_date}'
-"""
-summary_df = run_query(summary_sql)
+    # 3. PREDICTIVE SCORECARD (Using fct_maintenance_predictions)
+    maint_sql = f"""
+        SELECT *, 
+               (100 - (days_since_service * 0.2) - (total_overheats * 5)) as health_score
+        FROM `{SCHEMA}.fct_maintenance_predictions` 
+        WHERE vehicle_id = '{selected_vehicle}'
+    """
+    maint_df = run_query(maint_sql)
+    
+    if not maint_df.empty:
+        m = maint_df.iloc[0]
+        score = max(0, min(100, m['health_score']))
+        
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Health Score", f"{int(score)}%", delta=f"{m['maintenance_priority']}")
+        col2.metric("Last Service", f"{m['days_since_service']} days ago")
+        col3.metric("Lifetime Overheats", m['total_overheats'])
+        col4.metric("Tire Status", "🚨 LOW PSI" if m['low_tire_pressure'] else "✅ NOMINAL")
 
-is_ghost = summary_df.empty or summary_df.iloc[0]["active_days"] == 0
+    st.divider()
 
-if is_ghost:
-    st.warning(f"⚠️ **{selected_vehicle}** is currently inactive or in maintenance.")
-    summary = pd.Series({"active_days":0, "avg_speed":0, "max_speed":0, "avg_engine_temp":0, "avg_battery":0, "total_speeding":0})
-else:
-    summary = summary_df.iloc[0]
+    # 4. TELEMETRY & MAP (With Lagos Water Protection)
+    col_left, col_right = st.columns([1, 1])
 
-# 4. KPI TOP BAR
-c1, c2, c3, c4, c5, c6 = st.columns(6)
+    with col_left:
+        st.subheader("📡 Real-Time Diagnostic Feed")
+        tel_sql = f"""
+            SELECT engine_temp_c, fuel_level, speed_kph, zone_name, is_speeding_in_zone, latitude, longitude
+            FROM `{SCHEMA}.fct_latest_vehicle_stats`
+            WHERE vehicle_id = '{selected_vehicle}'
+        """
+        t_df = run_query(tel_sql)
+        
+        if not t_df.empty:
+            t = t_df.iloc[0]
+            
+            # Gauge-style display
+            st.progress(t['fuel_level']/100, text=f"Fuel Level: {t['fuel_level']}%")
+            
+            t1, t2 = st.columns(2)
+            t1.metric("Engine Temp", f"{t['engine_temp_c']}°C", 
+                      delta="HIGH" if t['engine_temp_c'] > 105 else None, delta_color="inverse")
+            t2.metric("Current Speed", f"{int(t['speed_kph'])} km/h")
+            
+            st.write(f"📍 **Zone:** {t['zone_name'] if pd.notna(t['zone_name']) else 'Unmapped Area'}")
+            if t['is_speeding_in_zone'] is True:
+                st.error("🚨 CRITICAL: Speeding violation detected in current zone.")
 
-c1.metric("Days Active", int(summary["active_days"]))
-c2.metric("Avg Speed", f"{summary['avg_speed']:.1f} kph")
-c3.metric("Max Speed", f"{summary['max_speed']:.1f} kph")
+    with col_right:
+        st.subheader("📍 Precise Asset Location")
+        # Protection logic: Don't show map if coords are 0 or far outside Lagos
+        if t_df.empty or t['latitude'] < 6.0 or t['latitude'] == 0:
+            st.info("GPS Signal Unavailable: Asset may be inside a maintenance bay or shielded.")
+        else:
+            map_data = pd.DataFrame({'lat': [t['latitude']], 'lon': [t['longitude']]})
+            st.map(map_data, zoom=13)
 
-temp_val = summary['avg_engine_temp']
-temp_status = "normal"
-if temp_val >= temp_crit: temp_status = "inverse"
-elif temp_val >= temp_warn: temp_status = "off"
+    st.divider()
 
-c4.metric("Avg Engine Temp", f"{temp_val:.1f}°C", 
-          delta="OVERHEAT" if temp_val > temp_warn else "Optimal", 
-          delta_color=temp_status)
-
-batt_val = summary['avg_battery']
-c5.metric("Battery Voltage", f"{batt_val:.2f}V", 
-          delta="LOW" if batt_val < batt_warn else "Healthy", 
-          delta_color="inverse" if batt_val < batt_warn else "normal")
-
-c6.metric("Total Speeding", int(summary["total_speeding"]))
-
-st.divider()
-
-# 5. DIAGNOSTIC TRENDS
-left, right = st.columns(2)
-with left:
-    st.subheader("🌡️ Engine Temperature Trend")
-    engine_df = run_query(f"""
-        SELECT date_key, avg_engine_temp_c 
-        FROM mart.fact_vehicle_daily_metrics 
-        WHERE vehicle_id = '{selected_vehicle}' 
-        AND date_key BETWEEN '{start_date}' AND '{end_date}' 
-        ORDER BY date_key
-    """)
-    if not engine_df.empty:
-        # Clean date for chart hover/X-axis
-        engine_df['date_key'] = pd.to_datetime(engine_df['date_key']).dt.date
-        st.area_chart(engine_df, x="date_key", y="avg_engine_temp_c", color="#ff8c00")
-
-with right:
-    st.subheader("⚡ Speeding & Stress Correlation")
-    stress_df = run_query(f"""
-        SELECT date_key, speeding_rate, avg_speed_kph 
-        FROM mart.fact_vehicle_daily_metrics 
-        WHERE vehicle_id = '{selected_vehicle}' 
-        AND date_key BETWEEN '{start_date}' AND '{end_date}' 
-        ORDER BY date_key
-    """)
-    if not stress_df.empty:
-        # Clean date for chart hover/X-axis
-        stress_df['date_key'] = pd.to_datetime(stress_df['date_key']).dt.date
-        st.line_chart(stress_df, x="date_key", y=["speeding_rate", "avg_speed_kph"])
-
-st.divider()
-
-# 6. MAINTENANCE & RISK FLAGS
-st.subheader("🛠️ Maintenance Recommendations")
-risk_triggered = False
-
-if summary["avg_engine_temp"] >= temp_crit:
-    st.error(f"**CRITICAL OVERHEAT:** {selected_vehicle} is averaging {summary['avg_engine_temp']:.1f}°C (Threshold: {temp_crit}°C). Immediate inspection required.")
-    risk_triggered = True
-elif summary["avg_engine_temp"] >= temp_warn:
-    st.warning(f"**Temperature Warning:** Above {temp_warn}°C. Monitor coolant levels.")
-    risk_triggered = True
-
-if summary["avg_battery"] < batt_warn:
-    st.warning(f"**Electrical Warning:** Battery at {summary['avg_battery']:.2f}V (Warning Threshold: {batt_warn}V).")
-    risk_triggered = True
-
-if not risk_triggered and not is_ghost:
-    st.success(f"Asset **{selected_vehicle}** is operating within all nominal parameters.")
-
-st.divider()
-
-# 7. DATA TABLE (FIXED DATE CLEANING)
-st.subheader("📋 Detailed Operational Log")
-log_df = run_query(f"""
-    SELECT 
-        date_key, 
-        avg_speed_kph, 
-        max_speed_kph, 
-        avg_engine_temp_c, 
-        avg_battery_voltage, 
-        speeding_events 
-    FROM mart.fact_vehicle_daily_metrics 
-    WHERE vehicle_id = '{selected_vehicle}' 
-    AND date_key BETWEEN '{start_date}' AND '{end_date}' 
-    ORDER BY date_key DESC
-""")
-
-if not log_df.empty:
-    log_df['date_key'] = pd.to_datetime(log_df['date_key']).dt.date
-    st.dataframe(log_df, use_container_width=True, hide_index=True)
-
-    csv_log = log_df.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Export Operational Log (CSV)",
-        data=csv_log,
-        file_name=f"logs_{selected_vehicle}_{pd.Timestamp.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv",
-    )
+    # 5. HARDWARE STRESS CHARTS
+    st.subheader("📉 7-Day Stress Analysis")
+    history_sql = f"""
+        SELECT activity_date, avg_speed, overheat_events, daily_profit
+        FROM `{SCHEMA}.fct_fleet_performance`
+        WHERE vehicle_id = '{selected_vehicle}'
+        ORDER BY activity_date ASC
+    """
+    h_df = run_query(history_sql)
+    
+    if not h_df.empty:
+        # Complex Chart: Speed vs Overheats
+        base = alt.Chart(h_df).encode(x='activity_date:T')
+        
+        line = base.mark_line(color='#5276A7').encode(
+            y=alt.Y('avg_speed:Q', title='Average Speed (km/h)')
+        )
+        
+        bar = base.mark_bar(opacity=0.3, color='#F4B400').encode(
+            y=alt.Y('overheat_events:Q', title='Overheat Incidents')
+        )
+        
+        st.altair_chart(alt.layer(bar, line).resolve_scale(y='independent'), use_container_width=True)
+        st.caption("Yellow bars represent engine stress (overheats); Blue line represents average speed.")

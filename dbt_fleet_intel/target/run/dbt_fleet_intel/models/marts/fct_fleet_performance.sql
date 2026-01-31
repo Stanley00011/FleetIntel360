@@ -41,7 +41,6 @@ finance_daily AS (
         SUM(revenue) as daily_revenue,
         SUM(total_cost) as daily_cost,
         SUM(net_profit) as daily_profit,
-        -- Corrected to match your stg_finance column name
         SUM(fraud_alerts_count) as total_fraud_alerts 
     FROM `fleetintel360`.`fleet_intel_staging`.`stg_finance`
     GROUP BY 1, 2

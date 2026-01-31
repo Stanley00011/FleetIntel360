@@ -1,114 +1,80 @@
-# dashboard/pages/2_Driver_Risk.py
 import streamlit as st
 import pandas as pd
+import os
+import altair as alt
 from utils.db import run_query
-from components.filters import driver_filter, date_filter
 
-st.set_page_config(page_title="Driver Risk Monitor", layout="wide")
+st.set_page_config(page_title="Driver Risk Mission Control", layout="wide")
+PROJECT_ID = os.getenv('GCP_PROJECT_ID', 'fleetintel360')
+SCHEMA = f"{PROJECT_ID}.fleet_intel_staging"
 
-st.title("Driver Risk Monitor")
-st.caption("Deep-dive into safety compliance and fatigue patterns")
+st.title("🚦 Driver Risk Mission Control")
+st.caption("Detailed behavioral audit: Identifying the 'Why' behind performance scores.")
 
-# FILTERS
-col1, col2 = st.columns(2)
-with col1:
-    selected_driver = driver_filter()
-with col2:
-    start_date, end_date = date_filter()
+# 1. SMART SELECTOR & DRILL-DOWN
+driver_list = run_query(f"SELECT driver_id, driver_name FROM `{SCHEMA}.dim_drivers` ORDER BY driver_name")
+selected_id = st.selectbox("Select Driver to Audit", driver_list['driver_id'], 
+                           format_func=lambda x: driver_list[driver_list['driver_id']==x]['driver_name'].iloc[0])
 
-if not selected_driver:
-    st.info("Select a driver to begin analysis.")
-    st.stop()
+# 2. EXECUTIVE KPIs FOR INDIVIDUAL
+audit_data = run_query(f"SELECT * FROM `{SCHEMA}.rpt_driver_rankings` WHERE driver_id = '{selected_id}'").iloc[0]
 
-# DATA FETCHING
-summary_sql = f"""
-SELECT
-    COUNT(DISTINCT date_key)           AS active_days,
-    AVG(avg_fatigue_index)             AS avg_fatigue,
-    SUM(speeding_events)               AS total_speeding,
-    MAX(max_continuous_hours)          AS max_hours,
-    SUM(fraud_alerts_count)            AS fraud_alerts
-FROM mart.fact_driver_daily_metrics
-WHERE driver_id = '{selected_driver}'
-  AND date_key BETWEEN '{start_date}' AND '{end_date}'
-"""
-summary = run_query(summary_sql).iloc[0]
-
-# KPI TOP BAR
-c1, c2, c3, c4, c5 = st.columns(5)
-
-c1.metric("Days Active", int(summary["active_days"]))
-c2.metric("Avg Fatigue", f"{summary['avg_fatigue']:.2f}", 
-          delta="Risk" if summary['avg_fatigue'] > 0.65 else "Safe", 
-          delta_color="inverse")
-c3.metric("Total Speeding", int(summary["total_speeding"]))
-c4.metric("Longest Shift", f"{summary['max_hours']:.1f}h", 
-          delta="Violation" if summary['max_hours'] > 8 else "Compliant", 
-          delta_color="inverse")
-c5.metric("Fraud Alerts", int(summary["fraud_alerts"]))
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("MTD Profit", f"${audit_data['total_profit']:,.2f}")
+c2.metric("Fatigue Index", f"{audit_data['avg_fatigue_score']:.2f}")
+c3.metric("Speeding Events", audit_data['total_speeding_incidents'])
+# Color-coded performance metric
+p_color = "inverse" if audit_data['performance_score'] < 0 else "normal"
+c4.metric("Performance Score", f"{audit_data['performance_score']:.2f}", delta="Needs Review" if audit_data['performance_score'] < 0 else "Optimal", delta_color=p_color)
 
 st.divider()
 
-# TREND ANALYSIS
-left, right = st.columns(2)
+# 3. PERFORMANCE DECOMPOSITION (VISUAL MATH)
+col_a, col_b = st.columns(2)
 
-with left:
-    st.subheader("🧠 Fatigue & Continuous Driving")
-    trend_sql = f"""
-    SELECT date_key::DATE as date, avg_fatigue_index, max_continuous_hours
-    FROM mart.fact_driver_daily_metrics
-    WHERE driver_id = '{selected_driver}' AND date_key BETWEEN '{start_date}' AND '{end_date}'
-    ORDER BY date_key
-    """
-    trend_df = run_query(trend_sql)
-    st.line_chart(trend_df, x="date", y=["avg_fatigue_index", "max_continuous_hours"])
-
-with right:
-    st.subheader("🚦 Speeding Profile")
-    speed_sql = f"""
-    SELECT date_key::DATE as date, speeding_events
-    FROM mart.fact_driver_daily_metrics
-    WHERE driver_id = '{selected_driver}' AND date_key BETWEEN '{start_date}' AND '{end_date}'
-    ORDER BY date_key
-    """
-    st.bar_chart(run_query(speed_sql), x="date", y="speeding_events", color="#ff4b4b")
-
-st.divider()
-
-# POLICY VIOLATION LOG 
-st.subheader("📋 Compliance Audit Log")
-
-audit_sql = f"""
-SELECT 
-    date_key,
-    ROUND(avg_fatigue_index, 2) as fatigue,
-    max_continuous_hours as shift_hrs,
-    speeding_events as speeding,
-    fraud_alerts_count as fraud
-FROM mart.fact_driver_daily_metrics
-WHERE driver_id = '{selected_driver}'
-  AND date_key BETWEEN '{start_date}' AND '{end_date}'
-  AND (avg_fatigue_index > 0.7 OR max_continuous_hours > 8 OR speeding_events > 10 OR fraud_alerts_count > 0)
-ORDER BY date_key DESC
-"""
-audit_df = run_query(audit_sql)
-
-if audit_df.empty:
-    st.success(f"Driver {selected_driver} is fully compliant for this period.")
-else:
-    audit_df['date_key'] = pd.to_datetime(audit_df['date_key']).dt.date
+with col_a:
+    st.subheader("📊 Score Decomposition")
+    st.markdown("_How behavioral penalties impact the bottom line_")
+    # Breakdown logic: (Profit/100) vs (Fatigue*50) vs (Speeding*10)
+    math_data = pd.DataFrame({
+        'Component': ['Profit Contribution (+)', 'Fatigue Penalty (-)', 'Speeding Penalty (-)'],
+        'Impact': [audit_data['total_profit']/100, -(audit_data['avg_fatigue_score']*50), -(audit_data['total_speeding_incidents']*10)]
+    })
     
-    st.warning(f"Detected {len(audit_df)} days with policy violations.")
-    st.dataframe(
-        audit_df.style.highlight_max(axis=0, color='rgba(255, 0, 0, 0.2)'), 
-        use_container_width=True,
-        hide_index=True
-    )
+    decomp_chart = alt.Chart(math_data).mark_bar().encode(
+        x=alt.X('Impact:Q', title="Score Contribution"),
+        y=alt.Y('Component:N', sort='-x'),
+        color=alt.condition(alt.datum.Impact > 0, alt.value("#2ecc71"), alt.value("#e74c3c")),
+        tooltip=['Component', 'Impact']
+    ).properties(height=300)
+    st.altair_chart(decomp_chart, use_container_width=True)
 
-# MAINTENANCE BOX
-with st.expander("ℹ️ Driver Safety Guidelines"):
-    st.write("""
-    - **Fatigue:** Any index above 0.70 requires mandatory 1-hour rest.
-    - **Shifts:** Maximum continuous driving hours capped at 8.0h.
-    - **Speeding:** More than 10 events per day triggers a formal review.
+
+
+with col_b:
+    st.subheader("📅 14-Day Safety Timeline")
+    st.markdown("_Correlation between fatigue and speeding events_")
+    trend = run_query(f"""
+        SELECT activity_date, avg_fatigue, speeding_events 
+        FROM `{SCHEMA}.fct_fleet_performance` 
+        WHERE driver_id = '{selected_id}' 
+        ORDER BY activity_date ASC LIMIT 14
     """)
+    
+    base = alt.Chart(trend).encode(x='activity_date:T')
+    line = base.mark_line(color='#e74c3c', strokeWidth=3).encode(y=alt.Y('avg_fatigue:Q', title="Fatigue Level"))
+    bars = base.mark_bar(opacity=0.3, color='#3498db').encode(y=alt.Y('speeding_events:Q', title="Speeding Incidents"))
+    
+    st.altair_chart((bars + line).resolve_scale(y='independent'), use_container_width=True)
+
+st.divider()
+
+# 4. AUDIT LOG TABLE
+st.subheader("🕵️ Recent Trip Anomalies")
+anomaly_sql = f"""
+    SELECT activity_date, daily_profit, fraud_alerts, speeding_events, overheat_events
+    FROM `{SCHEMA}.fct_fleet_performance`
+    WHERE driver_id = '{selected_id}'
+    ORDER BY activity_date DESC LIMIT 10
+"""
+st.dataframe(run_query(anomaly_sql), use_container_width=True, hide_index=True)

@@ -49,7 +49,7 @@ def generate_trip(driver_id: str, event_time: datetime) -> dict:
     total_cost = round(fuel_cost + toll_fees + maintenance_cost, 2)
 
     # Slight chance of fraud/risk behavior
-    fraud_alert = random.random() < 0.12           # ~12% probability
+    fraud_alert = random.random() < 0.12           # 12% probability
 
     return {
         "event_id": generate_id("trip"),

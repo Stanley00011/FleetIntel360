@@ -19,8 +19,6 @@ SELECT
     (l.speed_kph > l.zone_limit) as is_speeding_in_zone,
     l.fuel_level,
     l.engine_temp_c,
-    -- If your stg_telemetry already parsed these, use the names directly. 
-    -- If not, we use the raw JSON field (usually called 'data_json' or 'body' in staging)
     l.tire_psi_fl < 28 as low_tire_pressure, 
     l.event_timestamp
 FROM latest_telemetry l

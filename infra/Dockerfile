@@ -1,30 +1,27 @@
 FROM python:3.11-slim
 
+# Prevent Python from buffering logs
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
+
 WORKDIR /app
 
-# 1. Install system tools
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    curl \
+    git \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Upgrade pip first
-RUN pip install --no-cache-dir --upgrade pip
+# Install python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 3. Explicitly copy requirements from the context root
-COPY requirements.txt /app/requirements.txt
+# Copy the entire project (from the context provided in docker-compose)
+COPY . .
 
-# 4. Install and VERIFY
-RUN pip install --no-cache-dir -r /app/requirements.txt && \
-    pip show streamlit  # This will force the build to fail here if streamlit isn't found
+# Default port for Streamlit
+EXPOSE 8080
 
-# 5. Copy the rest of the project
-COPY . /app
-
-ENV PYTHONPATH=/app
-ENV PATH="/usr/local/bin:${PATH}"
-
-EXPOSE 8501
-
-# 6. Use the module execution syntax
-CMD ["python", "-m", "streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Default command (overridden by docker-compose)
+CMD ["streamlit", "run", "dashboard/app.py", "--server.port=8080", "--server.address=0.0.0.0"]

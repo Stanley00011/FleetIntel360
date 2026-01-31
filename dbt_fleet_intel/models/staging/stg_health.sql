@@ -9,7 +9,7 @@ renamed AS (
         CAST(JSON_VALUE(data, '$.continuous_driving_hours') AS FLOAT64) AS continuous_hours,
         CAST(JSON_VALUE(data, '$.fatigue_index') AS FLOAT64) AS fatigue_index,
         CAST(JSON_VALUE(data, '$.breaks_taken') AS BOOL) AS took_breaks,
-        -- Alerts is an array, so we keep it as JSON for now or flatten it later
+        -- Alerts is an array, so it's kept as JSON for now or flattened later
         JSON_QUERY(data, '$.alerts') AS alerts,
         TIMESTAMP(JSON_VALUE(data, '$.timestamp')) AS event_timestamp,
         publish_time AS ingested_at

@@ -18,7 +18,7 @@ SELECT
     v.days_since_service,
     s.total_overheats,
     l.low_tire_pressure,
-    -- The "Magic" Maintenance Logic
+    -- The Maintenance Logic
     CASE 
         WHEN v.days_since_service > 180 OR s.total_overheats > 10 THEN 'URGENT: Schedule Now'
         WHEN v.days_since_service > 90 OR s.total_overheats > 5 THEN 'Action Required'

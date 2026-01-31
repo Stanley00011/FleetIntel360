@@ -19,8 +19,6 @@ renamed AS (
         CAST(JSON_VALUE(data, '$.engine_temp_c') AS FLOAT64) AS engine_temp_c,
         CAST(JSON_VALUE(data, '$.speeding') AS BOOL) AS is_speeding,
         TIMESTAMP(JSON_VALUE(data, '$.timestamp')) AS event_timestamp,
-        
-        -- ADD THESE: Extracting nested Tire Pressure
         CAST(JSON_VALUE(data, '$.tire_psi.FL') AS FLOAT64) AS tire_psi_fl,
         CAST(JSON_VALUE(data, '$.tire_psi.FR') AS FLOAT64) AS tire_psi_fr,
         CAST(JSON_VALUE(data, '$.tire_psi.RL') AS FLOAT64) AS tire_psi_rl,

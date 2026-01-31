@@ -1,24 +1,37 @@
-# Python
+# Python & Virtual Envs
 __pycache__/
 *.pyc
 .venv/
 env/
+.env
 
-# Data & Database 
-# (We will ignore raw data, but keep the analytics DB for Streamlit Cloud)
+# Data & Logs
 warehouse/raw/
 warehouse/staging/
 *.log
+*.db
+*.db.wal
+target/
+logs/
 
-# Docker
-.dockerignore
-
-# Secrets 
-.env
-auth.json
+# Secrets (DANGER: Never track these)
 *.json
-!warehouse/analytics/analytics.duckdb # This '!' tells Git to TRACK this specific file
+service_account.json
+auth.json
+.gcp_keys/
 
-# .env
-GCP_PROJECT_ID=fleetintel360
-GOOGLE_APPLICATION_CREDENTIALS=service_account.json
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# OS Junk
+.DS_Store
+
+# dbt artifacts
+dbt_fleet_intel/target/
+dbt_fleet_intel/logs/
+dbt_fleet_intel/dbt_packages/
+dbt_fleet_intel/profiles.yml
+dbt_fleet_intel/.user.yml
