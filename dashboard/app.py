@@ -13,7 +13,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Use your exact .env variable name
 PROJECT_ID = os.getenv('GCP_PROJECT_ID', 'fleetintel360')
 SCHEMA = f"{PROJECT_ID}.fleet_intel_staging"
 
@@ -22,15 +21,16 @@ st.sidebar.header("Fleet Inventory")
 try:
     fleet_stats = run_query(f"""
         SELECT 
-            COUNT(*) as total_vehicles,
-            COUNTIF(operational_status = 'ACTIVE') as active_count,
-            COUNTIF(operational_status != 'ACTIVE') as ghost_count
+            CAST(COUNT(*) AS INT64) as total_vehicles,
+            CAST(COUNTIF(operational_status = 'ACTIVE') AS INT64) as active_count,
+            CAST(COUNTIF(operational_status != 'ACTIVE') AS INT64) as ghost_count
         FROM `{SCHEMA}.dim_vehicles`
     """)
     
-    st.sidebar.metric("Total Fleet Size", format_int(fleet_stats['total_vehicles'][0]))
-    st.sidebar.metric("Active Assets", format_int(fleet_stats['active_count'][0]))
-    st.sidebar.metric("Inactive/Maint.", format_int(fleet_stats['ghost_count'][0]))
+    # Explicitly cast to int() to strip the .0
+    st.sidebar.metric("Total Fleet Size", int(fleet_stats['total_vehicles'][0]))
+    st.sidebar.metric("Active Assets", int(fleet_stats['active_count'][0]))
+    st.sidebar.metric("Inactive/Maint.", int(fleet_stats['ghost_count'][0]))
 except Exception as e:
     st.sidebar.error("Stats unavailable")
 
@@ -50,11 +50,11 @@ try:
         with st.sidebar.expander("⭐ Top 3 Performers", expanded=True):
             for i, row in lb_df.head(3).iterrows():
                 st.markdown(f"**{row['driver_name']}**")
+                # Format score to 0 decimal places
                 st.caption(f"Score: {row['performance_score']:.0f} | Profit: ${row['total_profit']:,.0f}")
         
         with st.sidebar.expander("🚨 Critical Interventions", expanded=True):
             for i, row in lb_df.tail(3).iterrows():
-                # Red text for immediate attention
                 st.markdown(f"**{row['driver_name']}** :red[({row['performance_score']:.0f})]")
                 st.caption(f"Audit Required - Loss: ${row['total_profit']:,.0f}")
 except:
@@ -78,11 +78,14 @@ except:
 
 # Alerts
 try:
-    alert_count = run_query(f"""
-        SELECT COUNT(DISTINCT vehicle_id) FROM `{SCHEMA}.fct_latest_vehicle_stats` 
+    alert_res = run_query(f"""
+        SELECT CAST(COUNT(DISTINCT vehicle_id) AS INT64) as alert_count 
+        FROM `{SCHEMA}.fct_latest_vehicle_stats` 
         WHERE engine_temp_c > 100 OR speed_kph > 110
-    """).iloc[0,0]
-    c2.error(f"🚨 **Critical Alerts:** {alert_count} Vehicles")
+    """)
+    # Force to int to remove .0
+    alert_val = int(alert_res['alert_count'][0])
+    c2.error(f"🚨 **Critical Alerts:** {alert_val} Vehicles")
 except:
     c2.error("🚨 **Critical Alerts:** 0")
 
@@ -107,8 +110,10 @@ with chart_col1:
     if not status_dist.empty:
         st.bar_chart(status_dist.set_index("status"), color="#4db6ac")
     
-    total_v = fleet_stats['total_vehicles'][0] if not fleet_stats.empty else 1
-    active_perc = (fleet_stats['active_count'][0] / total_v * 100) if not fleet_stats.empty else 0
+    # Cast to int for clean percentage calculation
+    total_v = int(fleet_stats['total_vehicles'][0]) if not fleet_stats.empty else 1
+    active_v = int(fleet_stats['active_count'][0]) if not fleet_stats.empty else 0
+    active_perc = (active_v / total_v * 100)
     st.write(f"✅ **{active_perc:.0f}%** mission-ready.")
     st.progress(active_perc / 100)
 
@@ -124,7 +129,7 @@ with map_col:
 
 st.divider()
 
-# 5. NEW: STRATEGIC ZONE ANALYSIS (No sandwiching)
+# 5. STRATEGIC ZONE ANALYSIS
 st.subheader("🌐 Zone Operational Efficiency")
 col_x, col_y = st.columns(2)
 
@@ -150,8 +155,6 @@ with col_y:
         ).properties(height=300).interactive()
         st.altair_chart(scatter, use_container_width=True)
 
-
-
 st.divider()
 
 # 6. Driver Status & Audit Table
@@ -174,8 +177,11 @@ try:
 
     st.dataframe(
         drivers_audit.style.map(style_performance, subset=['performance_score'])
-                     .background_gradient(cmap='Reds', subset=['avg_fatigue_score'])
-                     .format({"total_profit": "${:,.2f}"}),
+                    .background_gradient(cmap='Reds', subset=['avg_fatigue_score'])
+                     .format({
+                         "total_profit": "${:,.2f}", 
+                         "performance_score": "{:.0f}" # Strips decimal in table
+                     }),
         use_container_width=True,
         hide_index=True
     )
