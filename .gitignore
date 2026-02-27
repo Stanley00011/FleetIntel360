@@ -17,7 +17,9 @@ warehouse/staging/
 .env
 auth.json
 *.json
-!warehouse/analytics/analytics.duckdb # This '!' tells Git to TRACK this specific filedbt_fleet_intel/target/
+
+!warehouse/analytics/analytics.duckdb # This '!' tells Git to TRACK this specific file
+dbt_fleet_intel/target/
 infra/terraform/.terraform/
 infra/terraform/*.tfstate*
 warehouse/raw/
