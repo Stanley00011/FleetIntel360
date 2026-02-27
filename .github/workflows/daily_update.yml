@@ -40,9 +40,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Force add the binary DB and newly generated raw logs
-          git add -f warehouse/analytics/analytics.duckdb
-          git add -f warehouse/raw/
+          git add warehouse/analytics/analytics.duckdb
           
           # Only commit if there are actual data changes
           git diff --quiet && git diff --staged --quiet || (git commit -m "Automated Data Refresh: $(date +%Y-%m-%d %H:%M)" && git push)
