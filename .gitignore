@@ -4,11 +4,6 @@ __pycache__/
 .venv/
 env/
 
-# Data & Database 
-# (We will ignore raw data, but keep the analytics DB for Streamlit Cloud)
-warehouse/raw/
-warehouse/staging/
-*.log
 
 # Docker
 .dockerignore
@@ -18,8 +13,19 @@ warehouse/staging/
 auth.json
 *.json
 
-!warehouse/analytics/analytics.duckdb # This '!' tells Git to TRACK this specific file
+
+# Data & Database 
+# Ignore the staging folder (temporary transformation data)
+warehouse/staging/
+*.log
+
+# Force Git to track the database (even if it's handled by LFS)
+!warehouse/analytics/analytics.duckdb 
+
+# Force Git to track the raw data folder (so March files get saved!)
+!warehouse/raw/
+
+# General ignores
 dbt_fleet_intel/target/
 infra/terraform/.terraform/
 infra/terraform/*.tfstate*
-warehouse/raw/
