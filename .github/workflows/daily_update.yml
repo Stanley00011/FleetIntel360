@@ -41,7 +41,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          git add warehouse/raw/*.csv
+          git add warehouse/raw
           git add warehouse/analytics/analytics.duckdb
           
           # Only commit if there are actual data changes
